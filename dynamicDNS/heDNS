@@ -1,0 +1,29 @@
+# Update Hurricane Electric DDNS IPv4 address
+
+
+:local ddnshost "HOST"
+:local key "PASSWORD"
+:local updatehost "dyn.dns.he.net"
+:local WANinterface "ether1"
+:local outputfile ("HE_DDNS" . ".txt")
+
+# Internal processing below...
+# ----------------------------------
+:local ipv4addr
+
+# Get WAN interface IP address
+:set ipv4addr [/ip address get [/ip address find interface=$WANinterface] address]
+:set ipv4addr [:pick [:tostr $ipv4addr] 0 [:find [:tostr $ipv4addr] "/"]]
+
+:if ([:len $ipv4addr] = 0) do={
+   :log error ("Could not get IP for interface " . $WANinterface)
+   :error ("Could not get IP for interface " . $WANinterface)
+}
+
+:log info ("Updating DDNS IPv4 address" . " Client IPv4 address to new IP " . $ipv4addr . "...")
+
+/tool fetch url="http://$ddnshost:$key@$updatehost/nic/update?hostname=$ddnshost&myip=$ipv4addr"  \
+dst-path=$outputfile
+                              
+:log info ([/file get ($outputfile) contents])
+/file remove ($outputfile)

@@ -1,0 +1,49 @@
+# Set needed variables
+:local username "USERNAME"
+:local password "PASSWORD"
+:local hostname "HOSTNAME.dyndns.org"
+
+:global dyndnsForce
+:global previousIP
+:local resolvedIP [:resolve $hostname]
+
+
+#:log info ("UpdateDynDNS: username = $username")
+#:log info ("UpdateDynDNS: password = $password")
+#:log info ("UpdateDynDNS: hostname = $hostname")
+#:log info ("UpdateDynDNS: previousIP = $previousIP")
+#:log info ("UpdateDynDNS: resolvedIP = $resolvedIP")
+
+# get the current IP address from the internet (in case of double-nat)
+/tool fetch mode=http address="checkip.dyndns.org" src-path="/" dst-path="/dyndns.checkip.html"
+:local result [/file get dyndns.checkip.html contents]
+
+# parse the current IP result
+:local resultLen [:len $result]
+:local startLoc [:find $result ": " -1]
+:set startLoc ($startLoc + 2)
+:local endLoc [:find $result "</body>" -1]
+:local currentIP [:pick $result $startLoc $endLoc]
+#:log info "UpdateDynDNS: currentIP from file = $currentIP"
+
+# Remove the # on next line to force an update every single time - useful for debugging,
+# but you could end up getting blacklisted by DynDNS!
+# Edit: Not really needed anymore... the result is not equal... Update will happen.
+
+#:set dyndnsForce true
+
+# Determine if dyndns update is needed
+# more dyndns updater request details http://www.dyndns.com/developers/specs/syntax.html
+#This is where we check the DNS record against actual result. Thanks to jimstolz76
+:if (($currentIP != $resolvedIP) || ($dyndnsForce = true)) do={
+  :set dyndnsForce false
+  :set previousIP $currentIP
+  /tool fetch user=$username password=$password mode=http address="members.dyndns.org" \
+  src-path="/nic/update?hostname=$hostname&myip=$currentIP" dst-path="/dyndns.txt"
+  :local result [/file get dyndns.txt contents]
+#  :log info ("UpdateDynDNS: Dyndns update needed")
+  :log info ("Update Result: " . $result)
+  :put ("Dyndns Update Result: " . $result)
+} else= {
+#  :log info ("UpdateDynDNS: No dyndns update needed")
+}
