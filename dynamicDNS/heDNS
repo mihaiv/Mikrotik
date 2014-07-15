@@ -18,3 +18,5 @@
    :log info ("IP Changed: $response")
    #/tool sms send usb2 $phone message="IP Changed: $response"
 }
+
+/file remove ($outputfile)
